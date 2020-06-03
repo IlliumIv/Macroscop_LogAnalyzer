@@ -1,0 +1,8 @@
+{
+  "runtimeOptions": {
+    "additionalProbingPaths": [
+      "C:\\Users\\Illium\\.dotnet\\store\\|arch|\\|tfm|",
+      "C:\\Users\\Illium\\.nuget\\packages"
+    ]
+  }
+}

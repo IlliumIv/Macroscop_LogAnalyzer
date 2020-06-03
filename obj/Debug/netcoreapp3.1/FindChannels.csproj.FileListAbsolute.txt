@@ -1,0 +1,13 @@
+C:\Users\Illium\Desktop\Файлы\github\FindChannels\bin\Debug\netcoreapp3.1\FindChannels.exe
+C:\Users\Illium\Desktop\Файлы\github\FindChannels\bin\Debug\netcoreapp3.1\FindChannels.deps.json
+C:\Users\Illium\Desktop\Файлы\github\FindChannels\bin\Debug\netcoreapp3.1\FindChannels.runtimeconfig.json
+C:\Users\Illium\Desktop\Файлы\github\FindChannels\bin\Debug\netcoreapp3.1\FindChannels.runtimeconfig.dev.json
+C:\Users\Illium\Desktop\Файлы\github\FindChannels\bin\Debug\netcoreapp3.1\FindChannels.dll
+C:\Users\Illium\Desktop\Файлы\github\FindChannels\bin\Debug\netcoreapp3.1\FindChannels.pdb
+C:\Users\Illium\Desktop\Файлы\github\FindChannels\obj\Debug\netcoreapp3.1\FindChannels.csprojAssemblyReference.cache
+C:\Users\Illium\Desktop\Файлы\github\FindChannels\obj\Debug\netcoreapp3.1\FindChannels.AssemblyInfoInputs.cache
+C:\Users\Illium\Desktop\Файлы\github\FindChannels\obj\Debug\netcoreapp3.1\FindChannels.AssemblyInfo.cs
+C:\Users\Illium\Desktop\Файлы\github\FindChannels\obj\Debug\netcoreapp3.1\FindChannels.csproj.CoreCompileInputs.cache
+C:\Users\Illium\Desktop\Файлы\github\FindChannels\obj\Debug\netcoreapp3.1\FindChannels.dll
+C:\Users\Illium\Desktop\Файлы\github\FindChannels\obj\Debug\netcoreapp3.1\FindChannels.pdb
+C:\Users\Illium\Desktop\Файлы\github\FindChannels\obj\Debug\netcoreapp3.1\FindChannels.genruntimeconfig.cache

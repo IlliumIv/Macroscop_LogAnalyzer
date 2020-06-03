@@ -1,0 +1,10 @@
+{
+  "version": 2,
+  "dgSpecHash": "TUS51vxw1hwIGEMbtrFDQZRo7ELZQT357HNXz9aZSI8FRq7N20NwVGZFuRzA4SLDyhUGkT2+fldYj4ink39ayA==",
+  "success": true,
+  "projectFilePath": "C:\\Users\\Illium\\Desktop\\Файлы\\github\\FindChannels\\FindChannels.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\Illium\\.nuget\\packages\\microsoft.aspnetcore.app.ref\\3.1.2\\microsoft.aspnetcore.app.ref.3.1.2.nupkg.sha512"
+  ],
+  "logs": []
+}
