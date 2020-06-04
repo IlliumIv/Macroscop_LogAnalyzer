@@ -1,4 +1,5 @@
-﻿using System;
+﻿using FindChannels.LogMessages;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -9,45 +10,58 @@ namespace FindChannels
 {
     class Program
     {
-        static readonly Regex lineCatch = new Regex(@"[a-z0-9]{8}-.{4}-.{4}-.{4}-.{12}");
-        static Dictionary<string, int> matches = new Dictionary<string, int>();
+        static readonly Regex NewMessageCatch = new Regex(@"^\[.*\]");
+        static Dictionary<string, int> Matches;
+
         static void Main(string[] args)
         {
             if (args.Length != 0)
             {
                 Stopwatch timer = new Stopwatch();
                 timer.Start();
+                Matches = new Dictionary<string, int>();
 
                 foreach (string path in args)
-                {
-                    try
-                    {
-                        StreamReader file = new StreamReader(path);
-                        string line;
-                        while ((line = file.ReadLine()) != null)
-                        {
-                            Match match = lineCatch.Match(line);
-                            if (match.Success)
-                                if (matches.ContainsKey(match.Value))
-                                    matches[match.Value]++;
-                                else
-                                    matches.Add(match.Value, 1);
-                        }
-                    }
-                    catch (Exception e)
-                    {
-                        Console.WriteLine(e.Message);
-                    }
-                }
+                    LogParser(path);
 
                 timer.Stop();
                 Console.WriteLine($"Channels found in {timer.ElapsedMilliseconds} ms!");
                 
-                foreach (KeyValuePair<string, int> keyValuePair in matches.OrderByDescending(key => key.Value))
+                foreach (KeyValuePair<string, int> keyValuePair in Matches.OrderByDescending(key => key.Value))
                     Console.WriteLine($"{keyValuePair.Key} --- {keyValuePair.Value}");
             }
             else
                 Console.WriteLine("Empty args!");
+        }
+
+        static void LogParser(string path)
+        {
+            try
+            {
+                using StreamReader logFile = new StreamReader(path);
+                string line;
+                List<string> rawLogStrings = new List<string>();
+                LogMessage logMessage;
+
+                while ((line = logFile.ReadLine()) != null)
+                {
+                    if (NewMessageCatch.Match(line).Success && rawLogStrings.Count > 0)
+                    {
+                        logMessage = new LogMessage(rawLogStrings);
+                        rawLogStrings = new List<string>();
+                    }
+
+                    rawLogStrings.Add(line);
+                }
+
+                if (rawLogStrings.Count > 0)
+                    logMessage = new LogMessage(rawLogStrings);
+
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine($"{e.Message}\n{e.StackTrace}");
+            }
         }
     }
 }
