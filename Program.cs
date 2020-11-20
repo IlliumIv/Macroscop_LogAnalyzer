@@ -11,7 +11,8 @@ namespace FindChannels
     class Program
     {
         static readonly Regex NewMessageCatch = new Regex(@"^\[.*\]");
-        static Dictionary<string, int> Matches;
+        public static Dictionary<string, int> Matches;
+        public static Dictionary<string, string> ChannelParams = new Dictionary<string, string>();
 
         static void Main(string[] args)
         {
@@ -28,7 +29,7 @@ namespace FindChannels
                 Console.WriteLine($"Channels found in {timer.ElapsedMilliseconds} ms!");
                 
                 foreach (KeyValuePair<string, int> keyValuePair in Matches.OrderByDescending(key => key.Value))
-                    Console.WriteLine($"{keyValuePair.Key} --- {keyValuePair.Value}");
+                    Console.WriteLine($"{keyValuePair.Key} --- {keyValuePair.Value}\n\t{ChannelParams[keyValuePair.Key]}\n");
             }
             else
                 Console.WriteLine("Empty args!");

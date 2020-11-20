@@ -74,17 +74,20 @@ namespace FindChannels.LogMessages
                             // int length = valueString.Length - start - (valueString.Length - valueString.IndexOf(valueCollectionSeparatorMatches[j + 1].Value));
                             int length = (valueString.Length - valueString.IndexOf(valueCollectionSeparatorMatches[j + 1].Value)) - start;
                             var st = valueString.Substring(start, length);
-                            Console.WriteLine($"{st}");
+                            // Console.WriteLine($"{st}");
                             valueStringCollection.Add(st.Trim());
                         }
 
                         // valueStringCollection.Add(valueString.Substring(valueString.IndexOf(valueCollectionSeparatorMatches[j + 1].Value)).Trim());
 
-                        valueString = $"\n[";
-                        foreach (string st in valueStringCollection)
-                            valueString += $"\n\t\"{st}\",";
-                        valueString = valueString.Substring(0, valueString.Length - 1);
-                        valueString += $"\n]";
+
+                        valueString = $"[";
+                        valueString += $"Not implemented yet";
+
+                        // foreach (string st in valueStringCollection)
+                        //     valueString += $"\n\t\t\"{st}\",";
+                        // valueString = valueString.Substring(0, valueString.Length - 1);
+                        valueString += $"]";
                         #endregion
 
                     }
@@ -100,7 +103,19 @@ namespace FindChannels.LogMessages
 
             jsonRaw += "\n}";
 
-            Console.WriteLine(jsonRaw);
+            Match match = ChannelIdCatch.Match(jsonRaw);
+            if (match.Success)
+                ChannelId = match.Value;
+
+            if (!(ChannelId is null))
+                if (Program.Matches.ContainsKey(ChannelId))
+                    Program.Matches[ChannelId]++;
+                else
+                {
+                    Program.Matches.Add(ChannelId, 1);
+                    Program.ChannelParams.Add(ChannelId, jsonRaw);
+                }
+            // Console.WriteLine(jsonRaw);
         }
     }
 }
