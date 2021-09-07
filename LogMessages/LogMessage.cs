@@ -1,121 +1,187 @@
-﻿using Newtonsoft.Json;
+﻿using FindChannels.LogMessages;
+using FindChannels.LogMessages.Enums;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
+using Newtonsoft.Json.Linq;
+using Newtonsoft.Json.Serialization;
 using System;
 using System.Collections.Generic;
-using System.Globalization;
+using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading;
 
 namespace FindChannels.LogMessages
 {
-    class LogMessage
+    abstract class LogMessage
     {
-        DateTime DateTime { get; }
-        string ChannelId { get; }
+        // public long ID;
+        private DateTime TimeStamp { get; }
+        [JsonConverter(typeof(ArrayConverter))] public HashSet<DateTime> TimeStamps { get; } = new HashSet<DateTime>();
+#nullable enable
+        private string? Thread { get; }
+#nullable disable
+        [JsonConverter(typeof(ArrayConverter))] public HashSet<string> Threads { get; } = new HashSet<string>();
+        public string Message { get => string.Join(Environment.NewLine, messageRawBody.Skip(messageOffset).Where(s => s.Length > 1)); }
+        protected abstract int messageOffset { get; }
+        public string Type { get => this.GetType().FullName; }
+        public int Count { get => TimeStamps.Count; }
+        protected string[] messageRawBody { get; }
+        [JsonConverter(typeof(StringEnumConverter))] public MessageType MessageType { get; }
+#nullable enable
+        [JsonProperty(Order = -2)] public string? ChannelId { get; protected set; }
+#nullable disable
 
-        private readonly string dateTamePattern = "yyyy-MM-dd HH:mm:ss,fff";
-        static readonly Regex ChannelIdCatch = new Regex(@"[a-z0-9]{8}-.{4}-.{4}-.{4}-.{12}");
-        static readonly Regex AdditionalInfoCatch = new Regex(@"[^,]*= ");
+        private readonly string dateTimeFormat = "yyyy-MM-dd HH:mm:ss,fff";
+        private readonly string regexFormat_DateTime = @"([\d]{4}-.{2}-.{2} .{2}:.{2}:.{2},.{3}).*";
+        private readonly string regexFormat_Thread = @"Thread[ =]*(.*)";
+        private readonly string regexFormat_ChannelId = @"([\d\w]{8}-.{4}-.{4}-.{4}-.{12})";
 
-        public LogMessage(List<string> rawLogStrings)
+        protected LogMessage(string [] messageStrings)
         {
-            var strings = rawLogStrings.ToArray();
+            messageRawBody = messageStrings;
 
-            string jsonRaw = "{";
-            string cropped = strings[0].Substring(1); // Cut off symbol "["
-            cropped = cropped.Substring(0, cropped.Length - 1); // Cut off symbol "]"
+            var parameterExpression = new Regex(regexFormat_ChannelId);
+            var parameterMatch = parameterExpression.Match(JsonConvert.SerializeObject(messageStrings));
+            if (parameterMatch.Groups[1].Value.Length > 0) ChannelId = parameterMatch.Groups[1].Value;
 
-            string dateTime = cropped.Substring(0, 23);
-            jsonRaw += $"\n\t\"DateTime\" : \"{dateTime}\"";
-
-            cropped = cropped.Substring(31); // Cut off date, time and " Thread="
-
-            MatchCollection addInfoMatches = AdditionalInfoCatch.Matches(cropped);
-            if (addInfoMatches.Count > 0)
+            parameterExpression = new Regex(regexFormat_DateTime);
+            parameterMatch = parameterExpression.Match(messageStrings[0]);
+            if (parameterMatch.Groups[1].Value.Length > 0)
             {
-                List<string> addInfoStringCollection = new List<string>();
-                int i;
-
-                for (i = 0; i < (addInfoMatches.Count - 2); i++)
-                {
-                    int start = cropped.IndexOf(addInfoMatches[i].Value);
-                    int length = cropped.Length - start - (cropped.Length - cropped.IndexOf(addInfoMatches[i + 1].Value)) - 1;
-                    var st = cropped.Substring(start, length);
-                    addInfoStringCollection.Add(st.Trim());
-                }
-                addInfoStringCollection.Add(cropped.Substring(cropped.IndexOf(addInfoMatches[i + 1].Value)).Trim());
-
-                Regex paramValueSeparatorCatch = new Regex(@" = ");
-                Regex valueCollectionSeparatorCatch = new Regex(@", ");
-
-                foreach (string s in addInfoStringCollection)
-                {
-                    string valueString = s;
-                    string paramString = "";
-                    Match paramValueSeparatorMatch = paramValueSeparatorCatch.Match(valueString);
-
-                    if (paramValueSeparatorMatch.Success)
-                    {
-                        int length = valueString.Length - (valueString.Length - valueString.IndexOf(paramValueSeparatorMatch.Value));
-                        paramString = $"\"{s.Substring(0, length)}\"";
-                        valueString = s.Substring(s.IndexOf(paramValueSeparatorMatch.Value) + paramValueSeparatorMatch.Value.Length);
-                    }
-
-                    MatchCollection valueCollectionSeparatorMatches = valueCollectionSeparatorCatch.Matches(valueString);
-                    if (valueCollectionSeparatorMatches.Count > 0)
-                    {
-
-                        #region Not Working
-                        List<string> valueStringCollection = new List<string>();
-                        int j;
-
-                        for (j = 0; j < (valueCollectionSeparatorMatches.Count - 1); j++)
-                        {
-                            int start = valueString.IndexOf(valueCollectionSeparatorMatches[j].Value);
-                            // int length = valueString.Length - start - (valueString.Length - valueString.IndexOf(valueCollectionSeparatorMatches[j + 1].Value));
-                            int length = (valueString.Length - valueString.IndexOf(valueCollectionSeparatorMatches[j + 1].Value)) - start;
-                            var st = valueString.Substring(start, length);
-                            // Console.WriteLine($"{st}");
-                            valueStringCollection.Add(st.Trim());
-                        }
-
-                        // valueStringCollection.Add(valueString.Substring(valueString.IndexOf(valueCollectionSeparatorMatches[j + 1].Value)).Trim());
-
-
-                        valueString = $"[";
-                        valueString += $"Not implemented yet";
-
-                        // foreach (string st in valueStringCollection)
-                        //     valueString += $"\n\t\t\"{st}\",";
-                        // valueString = valueString.Substring(0, valueString.Length - 1);
-                        valueString += $"]";
-                        #endregion
-
-                    }
-                    else
-                        valueString = $"\"{valueString}\"";
-
-
-                    jsonRaw += $"\n\t{paramString} : {valueString}";
-                }
+                TimeStamp = DateTime.ParseExact(parameterMatch.Groups[1].Value, dateTimeFormat, null);
+                TimeStamps.Add(TimeStamp);
             }
-            else
-                jsonRaw += $"\n\t\"Thread\" : \"{cropped}\"";
 
-            jsonRaw += "\n}";
+            string str = messageStrings[0];
+            int i = messageStrings[0].IndexOf("ChannelId"); if (i > 0) str = messageStrings[0].Substring(0, i);
+            i = str.IndexOf(", Id"); if (i > 0) str = str.Substring(0, i);
+            i = str.IndexOf("]"); if (i > 0) str = str.Substring(0, i);
+            parameterExpression = new Regex(regexFormat_Thread);
+            parameterMatch = parameterExpression.Match(str);
+            if (parameterMatch.Groups[1].Value.Length > 0)
+            {
+                Thread = parameterMatch.Groups[1].Value;
+                Threads.Add(Thread);
+            }
 
-            Match match = ChannelIdCatch.Match(jsonRaw);
-            if (match.Success)
-                ChannelId = match.Value;
+            MessageType = GetMessageType(messageStrings[1]);
 
-            if (!(ChannelId is null))
-                if (Program.Matches.ContainsKey(ChannelId))
-                    Program.Matches[ChannelId]++;
-                else
-                {
-                    Program.Matches.Add(ChannelId, 1);
-                    Program.ChannelParams.Add(ChannelId, jsonRaw);
-                }
-            // Console.WriteLine(jsonRaw);
+            Count_Messages();
+        }
+
+        protected MessageType GetMessageType(string value)
+        {
+            return value switch
+            {
+                "ERROR" => MessageType.ERROR,
+                "EXCEPTION" => MessageType.EXCEPTION,
+                "DEBUG" => MessageType.DEBUG,
+                _ => MessageType.UNKNOWN,
+            };
+        }
+
+        protected StreamFormatType? GetStreamFormat(string value)
+        {
+            return value switch
+            {
+                "MJPEG" => StreamFormatType.MJPEG,
+                "H264" => StreamFormatType.H264,
+                "H265" => StreamFormatType.H265,
+                "MPEG4_Part2" => StreamFormatType.MPEG4_Part2,
+                "MxPEG" => StreamFormatType.MxPEG,
+                _ => null,
+            };
+        }
+
+        protected SteamType? GetSteamType(string value)
+        {
+            return value switch
+            {
+                "MAIN" => SteamType.MAIN,
+                "ALTERNATIVE" => SteamType.ALTERNATIVE,
+                _ => null,
+            };
+        }
+
+#pragma warning disable CS0114 // Member hides inherited member; missing override keyword
+        public virtual bool Equals(object message)
+#pragma warning restore CS0114 // Member hides inherited member; missing override keyword
+        {
+            return this.ChannelId == (message as LogMessage).ChannelId
+                && IsSameMessage(message);
+        }
+
+        public override int GetHashCode()
+        {
+            return base.GetHashCode();
+        }
+
+        protected virtual bool IsSameMessage(object message)
+        {
+            return this.Message == (message as LogMessage).Message;
+        }
+
+        protected virtual void Count_Messages()
+        {
+            var isInRange = true;
+            if (Program.StartTime != null) isInRange = this.TimeStamp >= Program.StartTime;
+            if (Program.EndTime != null) isInRange = isInRange && this.TimeStamp <= Program.EndTime;
+
+            if (!isInRange) return;
+
+            var i = Program.ChannelParams.FindIndex(t => t.Equals(this));
+
+            switch (i)
+            {
+                case -1:
+                    Program.ChannelParams.Add(this);
+                    break;
+                default:
+                    var message = Program.ChannelParams[i];
+                    message.TimeStamps.Add(this.TimeStamp);
+                    if (this.Thread != null) message.Threads.Add(this.Thread);
+                    Program.ChannelParams[i] = message;
+                    break;
+            }
+        }
+
+        public class ConsoleOutContractResolver : DefaultContractResolver
+        {
+            public static readonly ConsoleOutContractResolver Instance = new ConsoleOutContractResolver();
+
+            protected override JsonProperty CreateProperty(MemberInfo member, MemberSerialization memberSerialization)
+            {
+                JsonProperty property = base.CreateProperty(member, memberSerialization);
+
+                if (property.PropertyName == "ID"
+                    || property.PropertyName == "TimeStamp"
+                    || property.PropertyName == "TimeStamps"
+                    || property.PropertyName == "Thread"
+                    || property.PropertyName == "Id")
+                    property.ShouldSerialize = instance => { return false; };
+
+                return property;
+            }
+        }
+
+        protected class ArrayConverter : JsonConverter
+        {
+            public override bool CanConvert(Type objectType)
+            {
+                return objectType == typeof(string[]);
+            }
+
+            public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
+            {
+                throw new NotImplementedException();
+            }
+
+            public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
+            {
+                writer.WriteRawValue(JsonConvert.SerializeObject(value, Formatting.None));
+            }
         }
     }
 }
