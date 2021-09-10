@@ -1,4 +1,4 @@
-﻿namespace FindChannels.LogMessages
+﻿namespace LogAnalyzer.Messages
 {
     class Error : LogMessage
     {

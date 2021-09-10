@@ -1,4 +1,4 @@
-﻿namespace FindChannels.LogMessages.Enums
+﻿namespace LogAnalyzer.Messages.Enums
 {
     public enum MessageType
     {

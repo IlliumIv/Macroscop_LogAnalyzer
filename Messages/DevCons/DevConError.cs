@@ -1,4 +1,4 @@
-﻿namespace FindChannels.LogMessages.DevCons
+﻿namespace LogAnalyzer.Messages.DevCons
 {
     class DevConError : DevCon
     {

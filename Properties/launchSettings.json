@@ -2,7 +2,7 @@
   "profiles": {
     "LogAnalyzer": {
       "commandName": "Project",
-      "commandLineArgs": "Error.log /t"
+      "commandLineArgs": "!!!ArchCounters.log !!!ArchCounters.log.1 !!!ArchCounters.log.2 /t"
     }
   }
 }

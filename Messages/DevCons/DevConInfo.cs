@@ -1,12 +1,12 @@
 ﻿using System.Text.RegularExpressions;
 
-namespace FindChannels.LogMessages.DevCons
+namespace LogAnalyzer.Messages.DevCons
 {
     class DevConInfo : DevConError
     {
         protected override int messageOffset => 1;
 
-        private static readonly string regexFormat_Id = @", Id[ =]*([0-9]*).*";
+        private static readonly string regexFormatId = @", Id[ =]*([0-9]*).*";
 
         public static int? Id { get; private set; }
 
@@ -14,7 +14,7 @@ namespace FindChannels.LogMessages.DevCons
 
         private static string[] ConcatFirstStringIfSplitted(string[] messageStrings)
         {
-            var parameterExpression = new Regex(regexFormat_Id);
+            var parameterExpression = new Regex(regexFormatId);
             var parameterMatch = parameterExpression.Match(messageStrings[1]);
 
             if (parameterMatch.Groups[1].Value.Length > 0)

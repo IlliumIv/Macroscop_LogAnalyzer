@@ -1,5 +1,5 @@
-﻿using FindChannels.LogMessages;
-using FindChannels.LogMessages.Enums;
+﻿using LogAnalyzer.Messages;
+using LogAnalyzer.Messages.Enums;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using Newtonsoft.Json.Linq;
@@ -12,7 +12,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 
-namespace FindChannels.LogMessages
+namespace LogAnalyzer.Messages
 {
     abstract class LogMessage
     {
@@ -34,19 +34,19 @@ namespace FindChannels.LogMessages
 #nullable disable
 
         private readonly string dateTimeFormat = "yyyy-MM-dd HH:mm:ss,fff";
-        private readonly string regexFormat_DateTime = @"([\d]{4}-.{2}-.{2} .{2}:.{2}:.{2},.{3}).*";
-        private readonly string regexFormat_Thread = @"Thread[ =]*(.*)";
-        private readonly string regexFormat_ChannelId = @"([\d\w]{8}-.{4}-.{4}-.{4}-.{12})";
+        private readonly string regexFormatDateTime = @"([\d]{4}-.{2}-.{2} .{2}:.{2}:.{2},.{3}).*";
+        private readonly string regexFormatThread = @"Thread[ =]*(.*)";
+        private readonly string regexFormatChannelId = @"([\d\w]{8}-.{4}-.{4}-.{4}-.{12})";
 
         protected LogMessage(string [] messageStrings)
         {
             messageRawBody = messageStrings;
 
-            var parameterExpression = new Regex(regexFormat_ChannelId);
+            var parameterExpression = new Regex(regexFormatChannelId);
             var parameterMatch = parameterExpression.Match(JsonConvert.SerializeObject(messageStrings));
             if (parameterMatch.Groups[1].Value.Length > 0) ChannelId = parameterMatch.Groups[1].Value;
 
-            parameterExpression = new Regex(regexFormat_DateTime);
+            parameterExpression = new Regex(regexFormatDateTime);
             parameterMatch = parameterExpression.Match(messageStrings[0]);
             if (parameterMatch.Groups[1].Value.Length > 0)
             {
@@ -58,7 +58,7 @@ namespace FindChannels.LogMessages
             int i = messageStrings[0].IndexOf("ChannelId"); if (i > 0) str = messageStrings[0].Substring(0, i);
             i = str.IndexOf(", Id"); if (i > 0) str = str.Substring(0, i);
             i = str.IndexOf("]"); if (i > 0) str = str.Substring(0, i);
-            parameterExpression = new Regex(regexFormat_Thread);
+            parameterExpression = new Regex(regexFormatThread);
             parameterMatch = parameterExpression.Match(str);
             if (parameterMatch.Groups[1].Value.Length > 0)
             {
@@ -105,9 +105,7 @@ namespace FindChannels.LogMessages
             };
         }
 
-#pragma warning disable CS0114 // Member hides inherited member; missing override keyword
         public virtual bool Equals(object message)
-#pragma warning restore CS0114 // Member hides inherited member; missing override keyword
         {
             return this.ChannelId == (message as LogMessage).ChannelId
                 && IsSameMessage(message);
@@ -131,18 +129,18 @@ namespace FindChannels.LogMessages
 
             if (!isInRange) return;
 
-            var i = Program.ChannelParams.FindIndex(t => t.Equals(this));
+            var i = Program.Instance.ChannelParams.FindIndex(t => t.Equals(this));
 
             switch (i)
             {
                 case -1:
-                    Program.ChannelParams.Add(this);
+                    Program.Instance.ChannelParams.Add(this);
                     break;
                 default:
-                    var message = Program.ChannelParams[i];
+                    var message = Program.Instance.ChannelParams[i];
                     message.TimeStamps.Add(this.TimeStamp);
                     if (this.Thread != null) message.Threads.Add(this.Thread);
-                    Program.ChannelParams[i] = message;
+                    Program.Instance.ChannelParams[i] = message;
                     break;
             }
         }
@@ -166,11 +164,11 @@ namespace FindChannels.LogMessages
             }
         }
 
-        protected class ArrayConverter : JsonConverter
+        public class ArrayConverter : JsonConverter
         {
             public override bool CanConvert(Type objectType)
             {
-                return objectType == typeof(string[]);
+                return objectType == typeof(string[]) || objectType ==  typeof(List<>);
             }
 
             public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)

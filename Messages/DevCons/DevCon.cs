@@ -1,24 +1,24 @@
-﻿using FindChannels.LogMessages.Enums;
+﻿using LogAnalyzer.Messages.Enums;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using System;
 using System.Linq;
 using System.Text.RegularExpressions;
 
-namespace FindChannels.LogMessages.DevCons
+namespace LogAnalyzer.Messages.DevCons
 {
     class DevCon : LogMessage
     {
         protected override int messageOffset => offset;
-        private readonly int offset = 2;
+        private int offset = 2;
 
-        // private readonly string regexFormat_ChannelId = @"ChannelId[ =]*([\d\w]{8}-.{4}-.{4}-.{4}-.{12})[ ,]*";
-        private readonly string regexFormat_SsType = @"SStype[ =]*(.*?)[ ,]*";
-        private readonly string regexFormat_SsFunctions = @"SSFunctions[ =]*(.*), DevType";
-        private readonly string regexFormat_DevType = @"DevType[ =]*([\d\w ]*)[ ,]*";
-        private readonly string regexFormat_Ip = @"Ip = ([\d\w.:]*)[ ,]*";
-        private readonly string regexFormat_SteamType = @"SteamType[ =]*(\w*)[ ,]*";
-        private readonly string regexFormat_StreamFormat = @"StreamFormat[ =]*([\d\w]*)";
+        // private readonly string regexFormatChannelId = @"ChannelId[ =]*([\d\w]{8}-.{4}-.{4}-.{4}-.{12})[ ,]*";
+        private readonly string regexFormatSsType = @"SStype[ =]*(.*?)[ ,]*";
+        private readonly string regexFormatSsFunctions = @"SSFunctions[ =]*(.*), DevType";
+        private readonly string regexFormatDevType = @"DevType[ =]*([\d\w ]*)[ ,]*";
+        private readonly string regexFormatIp = @"Ip = ([\d\w.:]*)[ ,]*";
+        private readonly string regexFormatSteamType = @"SteamType[ =]*(\w*)[ ,]*";
+        private readonly string regexFormatStreamFormat = @"StreamFormat[ =]*([\d\w]*)";
 
 #nullable enable
         public string? SsType { get; }
@@ -34,27 +34,27 @@ namespace FindChannels.LogMessages.DevCons
             Regex parameterExpression;
             Match parameterMatch;
 
-            parameterExpression = new Regex(regexFormat_SsType);
+            parameterExpression = new Regex(regexFormatSsType);
             parameterMatch = parameterExpression.Match(messageStrings[0]);
             if (parameterMatch.Groups[1].Value.Length > 0) SsType = parameterMatch.Groups[1].Value;
 
-            parameterExpression = new Regex(regexFormat_SsFunctions);
+            parameterExpression = new Regex(regexFormatSsFunctions);
             parameterMatch = parameterExpression.Match(messageStrings[0]);
             if (parameterMatch.Groups[1].Value.Length > 0) SsFunctions = parameterMatch.Groups[1].Value.Replace(" ", "").Split(",");
 
-            parameterExpression = new Regex(regexFormat_DevType);
+            parameterExpression = new Regex(regexFormatDevType);
             parameterMatch = parameterExpression.Match(messageStrings[0]);
             if (parameterMatch.Groups[1].Value.Length > 0) DevType = parameterMatch.Groups[1].Value;
 
-            parameterExpression = new Regex(regexFormat_Ip);
+            parameterExpression = new Regex(regexFormatIp);
             parameterMatch = parameterExpression.Match(messageStrings[0]);
             if (parameterMatch.Groups[1].Value.Length > 0) Address = parameterMatch.Groups[1].Value;
 
-            parameterExpression = new Regex(regexFormat_SteamType);
+            parameterExpression = new Regex(regexFormatSteamType);
             parameterMatch = parameterExpression.Match(messageStrings[0]);
             if (parameterMatch.Groups[1].Value.Length > 0) SteamType = GetSteamType(parameterMatch.Groups[1].Value);
 
-            parameterExpression = new Regex(regexFormat_StreamFormat);
+            parameterExpression = new Regex(regexFormatStreamFormat);
             parameterMatch = parameterExpression.Match(messageStrings[0]);
             if (parameterMatch.Groups[1].Value.Length > 0) StreamFormat = GetStreamFormat(parameterMatch.Groups[1].Value);
 
