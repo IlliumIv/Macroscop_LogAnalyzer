@@ -7,7 +7,7 @@ using System.Text.RegularExpressions;
 
 namespace LogAnalyzer.Messages.DevCons
 {
-    class DevCon : LogMessage
+    public abstract class DevCon : LogMessage
     {
         protected override int messageOffset => offset;
         private int offset = 2;
@@ -22,7 +22,7 @@ namespace LogAnalyzer.Messages.DevCons
 
 #nullable enable
         public string? SsType { get; }
-        [JsonConverter(typeof(ArrayConverter))] public string[]? SsFunctions { get; }
+        [JsonConverter(typeof(FormattingNoneConverter))] public string[]? SsFunctions { get; }
         public string? DevType { get; }
         public string? Address { get; }
         [JsonConverter(typeof(StringEnumConverter))] public SteamType? SteamType { get; }
@@ -64,24 +64,28 @@ namespace LogAnalyzer.Messages.DevCons
                 parameterMatch = parameterExpression.Match(messageStrings[2]);
                 if (parameterMatch.Groups[1].Value.Length > 0) offset = 3;
             }
+
+            Count_Messages();
         }
 
         public override bool Equals(object message)
         {
-            var m = (DevCon)message;
+            try {
+                var m = (DevCon)message;
 
-            var ssFunctionsComparer = 
-                this.SsFunctions == null || m.SsFunctions == null
-                ? this.SsFunctions == null && m.SsFunctions == null
-                : Enumerable.SequenceEqual(this.SsFunctions, m.SsFunctions);
+                var ssFunctionsComparer =
+                    this.SsFunctions == null || m.SsFunctions == null
+                    ? this.SsFunctions == null && m.SsFunctions == null
+                    : Enumerable.SequenceEqual(this.SsFunctions, m.SsFunctions);
 
-            return this.SsType == m.SsType &&
-                ssFunctionsComparer &&
-                this.DevType == m.DevType &&
-                this.Address == m.Address &&
-                this.SteamType == m.SteamType &&
-                this.StreamFormat == m.StreamFormat &&
-                base.Equals(message);
+                return this.SsType == m.SsType &&
+                    ssFunctionsComparer &&
+                    this.DevType == m.DevType &&
+                    this.Address == m.Address &&
+                    this.SteamType == m.SteamType &&
+                    this.StreamFormat == m.StreamFormat &&
+                    base.Equals(message);
+            } catch (InvalidCastException) { return false; };
         }
 
         public override int GetHashCode()

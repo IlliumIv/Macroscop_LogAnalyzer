@@ -2,7 +2,7 @@
 
 namespace LogAnalyzer.Messages.DevCons
 {
-    class DevConInfo : DevConError
+    class DevConInfo : DevCon
     {
         protected override int messageOffset => 1;
 

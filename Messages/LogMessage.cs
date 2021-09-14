@@ -5,6 +5,7 @@ using Newtonsoft.Json.Converters;
 using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -14,19 +15,19 @@ using System.Threading;
 
 namespace LogAnalyzer.Messages
 {
-    abstract class LogMessage
+    public abstract class LogMessage
     {
-        // public long ID;
-        private DateTime TimeStamp { get; }
-        [JsonConverter(typeof(ArrayConverter))] public HashSet<DateTime> TimeStamps { get; } = new HashSet<DateTime>();
+        public long GlobalID;
+        [JsonIgnore] public DateTime TimeStamp { get; }
+        [JsonConverter(typeof(FormattingNoneConverter))] public Dictionary<DateTime, long[]> TimeStamps { get; } = new Dictionary<DateTime, long[]>();
 #nullable enable
-        private string? Thread { get; }
+        [JsonIgnore] public string? Thread { get; }
 #nullable disable
-        [JsonConverter(typeof(ArrayConverter))] public HashSet<string> Threads { get; } = new HashSet<string>();
+        [JsonConverter(typeof(FormattingNoneConverter))] public Dictionary<string, long[]> Threads { get; } = new Dictionary<string, long[]>();
         public string Message { get => string.Join(Environment.NewLine, messageRawBody.Skip(messageOffset).Where(s => s.Length > 1)); }
         protected abstract int messageOffset { get; }
         public string Type { get => this.GetType().FullName; }
-        public int Count { get => TimeStamps.Count; }
+        public int Count { get => TimeStamps.Values.Sum(item => item.Length); }
         protected string[] messageRawBody { get; }
         [JsonConverter(typeof(StringEnumConverter))] public MessageType MessageType { get; }
 #nullable enable
@@ -38,8 +39,10 @@ namespace LogAnalyzer.Messages
         private readonly string regexFormatThread = @"Thread[ =]*(.*)";
         private readonly string regexFormatChannelId = @"([\d\w]{8}-.{4}-.{4}-.{4}-.{12})";
 
-        protected LogMessage(string [] messageStrings)
+        protected LogMessage(string[] messageStrings)
         {
+            GlobalID = Interlocked.Increment(ref Program.GlobalMessageID);
+
             messageRawBody = messageStrings;
 
             var parameterExpression = new Regex(regexFormatChannelId);
@@ -51,7 +54,7 @@ namespace LogAnalyzer.Messages
             if (parameterMatch.Groups[1].Value.Length > 0)
             {
                 TimeStamp = DateTime.ParseExact(parameterMatch.Groups[1].Value, dateTimeFormat, null);
-                TimeStamps.Add(TimeStamp);
+                TimeStamps.Add(TimeStamp, new long[1] { this.GlobalID });
             }
 
             string str = messageStrings[0];
@@ -63,12 +66,10 @@ namespace LogAnalyzer.Messages
             if (parameterMatch.Groups[1].Value.Length > 0)
             {
                 Thread = parameterMatch.Groups[1].Value;
-                Threads.Add(Thread);
+                Threads.Add(Thread, new long[1] { this.GlobalID });
             }
 
             MessageType = GetMessageType(messageStrings[1]);
-
-            Count_Messages();
         }
 
         protected MessageType GetMessageType(string value)
@@ -105,15 +106,15 @@ namespace LogAnalyzer.Messages
             };
         }
 
-        public virtual bool Equals(object message)
-        {
-            return this.ChannelId == (message as LogMessage).ChannelId
-                && IsSameMessage(message);
-        }
-
         public override int GetHashCode()
         {
             return base.GetHashCode();
+        }
+
+        public virtual bool Equals(object message)
+        {
+            return this.ChannelId == (message as LogMessage).ChannelId &&
+                 IsSameMessage(message);
         }
 
         protected virtual bool IsSameMessage(object message)
@@ -129,20 +130,7 @@ namespace LogAnalyzer.Messages
 
             if (!isInRange) return;
 
-            var i = Program.Instance.ChannelParams.FindIndex(t => t.Equals(this));
-
-            switch (i)
-            {
-                case -1:
-                    Program.Instance.ChannelParams.Add(this);
-                    break;
-                default:
-                    var message = Program.Instance.ChannelParams[i];
-                    message.TimeStamps.Add(this.TimeStamp);
-                    if (this.Thread != null) message.Threads.Add(this.Thread);
-                    Program.Instance.ChannelParams[i] = message;
-                    break;
-            }
+            Instance.Insert(this);
         }
 
         public class ConsoleOutContractResolver : DefaultContractResolver
@@ -153,22 +141,20 @@ namespace LogAnalyzer.Messages
             {
                 JsonProperty property = base.CreateProperty(member, memberSerialization);
 
-                if (property.PropertyName == "ID"
-                    || property.PropertyName == "TimeStamp"
+                if (property.PropertyName == "GlobalID"
                     || property.PropertyName == "TimeStamps"
-                    || property.PropertyName == "Thread"
-                    || property.PropertyName == "Id")
+                    || property.PropertyName == "Threads")
                     property.ShouldSerialize = instance => { return false; };
 
                 return property;
             }
         }
 
-        public class ArrayConverter : JsonConverter
+        public class FormattingNoneConverter : JsonConverter
         {
             public override bool CanConvert(Type objectType)
             {
-                return objectType == typeof(string[]) || objectType ==  typeof(List<>);
+                return true;
             }
 
             public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
@@ -180,6 +166,27 @@ namespace LogAnalyzer.Messages
             {
                 writer.WriteRawValue(JsonConvert.SerializeObject(value, Formatting.None));
             }
+        }
+    }
+
+    public static class LogMessageExtension
+    {
+        public static LogMessage Concat(this LogMessage objA, LogMessage objB)
+        {
+            try { objA.TimeStamps.Add(objB.TimeStamp, new long[1] { objB.GlobalID }); }
+            catch (ArgumentException)
+            {
+                var item = objA.TimeStamps.First(item => item.Key == objB.TimeStamp);
+                objA.TimeStamps[item.Key] = item.Value.Concat(new long[1] { objB.GlobalID }).ToArray();
+            }
+            if (objB.Thread != null) try { objA.Threads.Add(objB.Thread, new long[1] { objB.GlobalID }); }
+                catch (ArgumentException)
+                {
+                    var item = objA.Threads.First(item => item.Key == objB.Thread);
+                    objA.Threads[item.Key] = item.Value.Concat(new long[1] { objB.GlobalID }).ToArray();
+                }
+
+            return objA;
         }
     }
 }
