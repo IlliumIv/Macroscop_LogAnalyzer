@@ -53,23 +53,5 @@ namespace LogAnalyzer
                     break;
             }
         }
-
-        public static LogMessage Concat(this LogMessage objA, LogMessage objB)
-        {
-            try { objA.TimeStamps.Add(objB.TimeStamp, new long[1] { objB.GlobalID }); }
-            catch (ArgumentException)
-            {
-                var item = objA.TimeStamps.First(item => item.Key == objB.TimeStamp);
-                objA.TimeStamps[item.Key] = item.Value.Concat(new long[1] { objB.GlobalID }).ToArray();
-            }
-            if (objB.Thread != null) try { objA.Threads.Add(objB.Thread, new long[1] { objB.GlobalID }); }
-                catch (ArgumentException)
-                {
-                    var item = objA.Threads.First(item => item.Key == objB.Thread);
-                    objA.Threads[item.Key] = item.Value.Concat(new long[1] { objB.GlobalID }).ToArray();
-                }
-
-            return objA;
-        }
     }
 }
