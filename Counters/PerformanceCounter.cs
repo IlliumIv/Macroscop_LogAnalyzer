@@ -4,7 +4,7 @@ using System.Text;
 
 namespace LogAnalyzer.Counters
 {
-    public class PerformanceCounter : LogCounter
+    public class PerformanceCounter : BaseCounter
     {
         protected override string dateTimeFormat => "dd.MM.yyyy H:mm:ss";
         protected override int timeOffset => 0;

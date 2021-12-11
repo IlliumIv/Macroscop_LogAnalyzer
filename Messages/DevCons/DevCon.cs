@@ -7,7 +7,7 @@ using System.Text.RegularExpressions;
 
 namespace LogAnalyzer.Messages.DevCons
 {
-    public abstract class DevCon : LogMessage
+    public abstract class DevCon : BaseMessage
     {
         protected override int messageOffset => offset;
         private int offset = 2;
@@ -21,6 +21,7 @@ namespace LogAnalyzer.Messages.DevCons
         private readonly string regexFormatStreamFormat = @"StreamFormat[ =]*([\d\w]*)";
 
 #nullable enable
+        public string? ChannelId { get; protected set; }
         public string? SsType { get; }
         [JsonConverter(typeof(FormattingNoneConverter))] public string[]? SsFunctions { get; }
         public string? DevType { get; }
@@ -65,7 +66,7 @@ namespace LogAnalyzer.Messages.DevCons
                 if (parameterMatch.Groups[1].Value.Length > 0) offset = 3;
             }
 
-            Count_Messages();
+            Instance.Insert(this);
         }
 
         public override bool Equals(object message)
@@ -78,7 +79,8 @@ namespace LogAnalyzer.Messages.DevCons
                     ? this.SsFunctions == null && m.SsFunctions == null
                     : Enumerable.SequenceEqual(this.SsFunctions, m.SsFunctions);
 
-                return this.SsType == m.SsType &&
+                return this.ChannelId == m.ChannelId &&
+                    this.SsType == m.SsType &&
                     ssFunctionsComparer &&
                     this.DevType == m.DevType &&
                     this.Address == m.Address &&

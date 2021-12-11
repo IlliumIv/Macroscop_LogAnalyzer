@@ -2,9 +2,9 @@
 {
     public enum MessageType
     {
+        DEBUG,
         UNKNOWN,
-        ERROR,
         EXCEPTION,
-        DEBUG
+        ERROR,
     }
 }

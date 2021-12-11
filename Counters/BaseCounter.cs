@@ -7,7 +7,7 @@ using System.Text;
 
 namespace LogAnalyzer.Counters
 {
-    public abstract class LogCounter
+    public abstract class BaseCounter
     {
         // [JsonConverter(typeof(Messages.LogMessage.ArrayConverter))]
         public DateTime TimeStamp { get; set; }
@@ -16,7 +16,7 @@ namespace LogAnalyzer.Counters
         // protected abstract int dataOffset { get; }
         protected abstract int timeOffset { get; }
 
-        public LogCounter() { }
+        public BaseCounter() { }
 
         public virtual bool TryExtract<T>(string data, ref T result)
         {

@@ -10,6 +10,7 @@ using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading;
+using LogAnalyzer.Messages.Enums;
 
 namespace LogAnalyzer
 {
@@ -19,6 +20,8 @@ namespace LogAnalyzer
 
         public static bool HideTimeStamps = true;
         public static bool HideMessages = false;
+        public static MessageType LogLevel = MessageType.UNKNOWN;
+        private static bool ContinueParsing = true;
         public static DateTime? StartTime { get; private set; }
         public static DateTime? EndTime { get; private set; }
 
@@ -38,18 +41,18 @@ namespace LogAnalyzer
                 Parse(path);
 
             if (rawArchCounters != null)
-                foreach (var s in rawArchCounters)
+                foreach (var @string in rawArchCounters)
                 {
                     var archCounter = new ArchCounter();
-                    if (archCounter.TryExtract(s, ref archCounter))
+                    if (archCounter.TryExtract(@string, ref archCounter))
                         Instance.ArchCounters.Add(archCounter);
                 }
 
             if (rawPerformances != null)
-                foreach (var s in rawPerformances)
+                foreach (var @string in rawPerformances)
                 {
                     var perfCounter = new PerformanceCounter();
-                    if (perfCounter.TryExtract(s, ref perfCounter))
+                    if (perfCounter.TryExtract(@string, ref perfCounter))
                         Instance.Performances.Add(perfCounter);
                 }
 
@@ -58,7 +61,7 @@ namespace LogAnalyzer
 
             timer.Restart();
 
-            Instance.ChannelParams.Sort((x, y) => y.Count.CompareTo(x.Count));
+            Instance.ErrorMessages.Sort((x, y) => y.Count.CompareTo(x.Count));
             Instance.DeviceConnectionMessages.Sort((x, y) => y.Count.CompareTo(x.Count));
             Instance.ArchCounters.Sort((x, y) => x.TimeStamp.CompareTo(y.TimeStamp));
             Instance.Performances.Sort((x, y) => x.TimeStamp.CompareTo(y.TimeStamp));
@@ -71,7 +74,7 @@ namespace LogAnalyzer
                 NullValueHandling = NullValueHandling.Ignore,
             };
 
-            if (HideTimeStamps) serializerSettings.ContractResolver = new LogMessage.ConsoleOutContractResolver();
+            if (HideTimeStamps) serializerSettings.ContractResolver = new BaseMessage.ConsoleOutContractResolver();
 
             if (Instance.ArchCounters.Count > 0) Console.Write($"ArchCounters.Count: {Instance.ArchCounters.Count}\n" +
                 "ArchCounters.MinTime: {0}\n" +
@@ -103,76 +106,53 @@ namespace LogAnalyzer
                 Instance.Performances.Average(item => item.PrivateMemoryUsage)
                 );
 
-            var errors = Instance.ChannelParams.Where(item => item.MessageType == Messages.Enums.MessageType.ERROR
-                                                               || item.MessageType == Messages.Enums.MessageType.EXCEPTION
-                                                               || (item.MessageType == Messages.Enums.MessageType.UNKNOWN && item.Count > 1));
-
-            Console.WriteLine($"==============================================\nErrors " +
-                $"({errors.Sum(item => item.Count)})");
+            var s = $"==================== Errors ({Instance.ErrorMessages.Sum(item => item.Count)}) ====================";
+            Console.WriteLine(String.Format("{0," + ((Console.WindowWidth / 2) + (s.Length / 2)) +"}", s));
 
             if (!HideMessages)
-                foreach (var message in errors)
-                {
+                foreach (var message in Instance.ErrorMessages)
                     Console.Write($"{JsonConvert.SerializeObject(message, Formatting.Indented, serializerSettings)}\n");
-                }
 
-            var devCons = Instance.DeviceConnectionMessages.Where(item => item.MessageType == Messages.Enums.MessageType.ERROR
-                                                               || item.MessageType == Messages.Enums.MessageType.EXCEPTION
-                                                               || (item.MessageType == Messages.Enums.MessageType.UNKNOWN && item.Count > 1));
-
-            Console.WriteLine();
-            Console.WriteLine($"==============================================\nDevCons Errors " +
-                $"({devCons.Sum(item => item.Count)})");
+            s = $"==================== DevCons Messages ({Instance.DeviceConnectionMessages.Sum(item => item.Count)}) ====================";
+            Console.WriteLine(String.Format("{0," + ((Console.WindowWidth / 2) + (s.Length / 2)) + "}", s));
 
             if (!HideMessages)
-                foreach (var message in devCons)
-                {
+                foreach (var message in Instance.DeviceConnectionMessages)
                     Console.Write($"{JsonConvert.SerializeObject(message, Formatting.Indented, serializerSettings)}\n");
-                }
+
+            s = $"==================== Debug Messages ({Instance.DebugMessages.Sum(item => item.Count)}) ====================";
+            Console.WriteLine(String.Format("{0," + ((Console.WindowWidth / 2) + (s.Length / 2)) + "}", s));
+
+            if (!HideMessages)
+                foreach (var message in Instance.DebugMessages)
+                    Console.Write($"{JsonConvert.SerializeObject(message, Formatting.Indented, serializerSettings)}\n");
         }
 
         private static HashSet<string> ParseArgs(string[] args)
         {
-            if (args.Length == 0)
-            {
-                ShowHelp();
-                return null;
-            }
+            if (args.Length == 0) return ShowHelp() as HashSet<string>;
 
-            List<string> argsList = new List<string>();
-            HashSet<string> paths = new HashSet<string>();
+            HashSet<string> paths = new();
 
             for (int i = 0; i < args.Length; i++)
             {
                 if ((args[i].Length == 2 && !args[i].Contains(":")) || args[i].StartsWith("--"))
                 {
                     var argument = args[i][1..];
-                    switch (argument.ToLower())
+                    _ = argument.ToLower() switch
                     {
-                        case "s":
-                        case "-starttime":
-                            StartTime = DateTime.Parse(args[i + 1]);
-                            i++;
-                            break;
-
-                        case "e":
-                        case "-endtime":
-                            EndTime = DateTime.Parse(args[i + 1]);
-                            i++;
-                            break;
-
-                        case "t":
-                            HideTimeStamps = false;
-                            break;
-
-                        case "h":
-                            HideMessages = true;
-                            break;
-
-                        case "?":
-                            ShowHelp();
-                            break;
-                    }
+                        "s"          => (StartTime = DateTime.Parse(args[i + 1]), i++),
+                        "-starttime" => (StartTime = DateTime.Parse(args[i + 1]), i++),
+                        "e"          => (EndTime = DateTime.Parse(args[i + 1]), i++),
+                        "-endtime"   => (EndTime = DateTime.Parse(args[i + 1]), i++),
+                        "t"          => (HideTimeStamps = false),
+                        "h"          => (HideMessages = true),
+                        "-debug"     => (LogLevel = MessageType.DEBUG),
+                        "-exception" => (LogLevel = MessageType.EXCEPTION),
+                        "-error"     => (LogLevel = MessageType.ERROR),
+                        "?"          => (ShowHelp()),
+                        _ => throw new NotImplementedException(message: $"Invalid input parameter: \"{args[i]}\""),
+                    };
                 }
                 else
                 {
@@ -185,10 +165,11 @@ namespace LogAnalyzer
             return paths;
         }
 
-        private static void ShowHelp()
+        private static object ShowHelp()
         {
             Console.WriteLine($"Help");
             Environment.Exit(0);
+            return null;
         }
 
         static void Parse(string path)
@@ -225,12 +206,22 @@ namespace LogAnalyzer
             Console.WriteLine(message);
         }
 
+        private static void Console_CancelKeyPress(object sender, ConsoleCancelEventArgs e)
+        {
+            e.Cancel = true;
+
+            if (e.SpecialKey == ConsoleSpecialKey.ControlC)
+            {
+                ContinueParsing = false;
+            }
+        }
+
         private static bool ParseMessages(StreamReader reader, long position, HashSet<string> rawLogStrings, string fileName, ProgressBar progress)
         {
             string line;
-            bool success = true;
+            ContinueParsing = true;
 
-            while ((line = reader.ReadLine()) != null && success)
+            while ((line = reader.ReadLine()) != null && ContinueParsing)
             {
                 if (position != reader.BaseStream.Position)
                 {
@@ -240,16 +231,16 @@ namespace LogAnalyzer
 
                 if (NewMessageCatch.Match(line).Success && rawLogStrings.Count > 0)
                 {
-                    success = CreateNewMessage(fileName, rawLogStrings);
+                    ContinueParsing = CreateNewMessage(fileName, rawLogStrings);
                     rawLogStrings = new HashSet<string>();
                 }
                 rawLogStrings.Add(line);
             }
 
             if (rawLogStrings.Count > 0)
-                success = CreateNewMessage(fileName, rawLogStrings);
+                ContinueParsing = CreateNewMessage(fileName, rawLogStrings);
 
-            return success;
+            return ContinueParsing;
         }
 
         private static bool CreateNewMessage(string fileName, HashSet<string> messageStrings)
@@ -258,8 +249,10 @@ namespace LogAnalyzer
             object? _ = fileName switch
 #nullable disable
             {
+                "NetworkServer" => new NetworkServer(messageStrings.ToArray()),
                 "AppConstruct" => new AppConstruct(messageStrings.ToArray()),
-                "Error" => new Error(messageStrings.ToArray()),
+                // "Error" => new Error(messageStrings.ToArray()),
+                "ConfigStorage_Error" => new ConfigStorage_Error(messageStrings.ToArray()),
                 "DevConInfo" => new DevConInfo(messageStrings.ToArray()),
                 "DevConError" => new DevConError(messageStrings.ToArray()),
                 "DevConDebug" => new DevConDebug(messageStrings.ToArray()),

@@ -5,7 +5,7 @@ using System.Text;
 
 namespace LogAnalyzer.Counters
 {
-    public class ArchCounter : LogCounter
+    public class ArchCounter : BaseCounter
     {
         protected override string dateTimeFormat => "dd.MM HH:mm:ss";
         protected override int timeOffset => 2;

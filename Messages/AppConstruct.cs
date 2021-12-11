@@ -1,11 +1,11 @@
 ﻿namespace LogAnalyzer.Messages
 {
-    class AppConstruct : LogMessage
+    class AppConstruct : BaseMessage
     {
         protected override int messageOffset => 2;
         public AppConstruct(string[] messageStrings) : base(messageStrings)
         {
-            Count_Messages();
+            Instance.Insert(this);
         }
     }
 }
