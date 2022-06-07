@@ -19,7 +19,7 @@ namespace LogAnalyzer
         static readonly Regex NewMessageCatch = new Regex(@"^\[.*\]");
 
         public static bool HideTimeStamps = true;
-        public static bool HideMessages = false;
+        public static int HideMessagesIfCountLessThan = 0;
         public static MessageType LogLevel = MessageType.UNKNOWN;
         private static bool ContinueParsing = true;
         public static DateTime? StartTime { get; private set; }
@@ -107,24 +107,24 @@ namespace LogAnalyzer
                 );
 
             var s = $"==================== Errors ({Instance.ErrorMessages.Sum(item => item.Count)}) ====================";
-            Console.WriteLine(String.Format("{0," + ((Console.WindowWidth / 2) + (s.Length / 2)) +"}", s));
+            Console.WriteLine(String.Format("{0," + ((Console.WindowWidth / 2) + (s.Length / 2)) + "}", s));
 
-            if (!HideMessages)
-                foreach (var message in Instance.ErrorMessages)
+            foreach (var message in Instance.ErrorMessages)
+                if (message.Count > HideMessagesIfCountLessThan)
                     Console.Write($"{JsonConvert.SerializeObject(message, Formatting.Indented, serializerSettings)}\n");
 
             s = $"==================== DevCons Messages ({Instance.DeviceConnectionMessages.Sum(item => item.Count)}) ====================";
             Console.WriteLine(String.Format("{0," + ((Console.WindowWidth / 2) + (s.Length / 2)) + "}", s));
 
-            if (!HideMessages)
-                foreach (var message in Instance.DeviceConnectionMessages)
+            foreach (var message in Instance.DeviceConnectionMessages)
+                if (message.Count > HideMessagesIfCountLessThan)
                     Console.Write($"{JsonConvert.SerializeObject(message, Formatting.Indented, serializerSettings)}\n");
 
             s = $"==================== Debug Messages ({Instance.DebugMessages.Sum(item => item.Count)}) ====================";
             Console.WriteLine(String.Format("{0," + ((Console.WindowWidth / 2) + (s.Length / 2)) + "}", s));
 
-            if (!HideMessages)
-                foreach (var message in Instance.DebugMessages)
+            foreach (var message in Instance.DebugMessages)
+                if (message.Count > HideMessagesIfCountLessThan)
                     Console.Write($"{JsonConvert.SerializeObject(message, Formatting.Indented, serializerSettings)}\n");
         }
 
@@ -146,10 +146,8 @@ namespace LogAnalyzer
                         "e"          => (EndTime = DateTime.Parse(args[i + 1]), i++),
                         "-endtime"   => (EndTime = DateTime.Parse(args[i + 1]), i++),
                         "t"          => (HideTimeStamps = false),
-                        "h"          => (HideMessages = true),
-                        "-debug"     => (LogLevel = MessageType.DEBUG),
-                        "-exception" => (LogLevel = MessageType.EXCEPTION),
-                        "-error"     => (LogLevel = MessageType.ERROR),
+                        "h"          => (HideMessagesIfCountLessThan = int.Parse(args[i + 1]), i++),
+                        "-verbose"   => (SetVerboseLevel(args[i + 1].ToLower()), i++),
                         "?"          => (ShowHelp()),
                         _ => throw new NotImplementedException(message: $"Invalid input parameter: \"{args[i]}\""),
                     };
@@ -165,9 +163,41 @@ namespace LogAnalyzer
             return paths;
         }
 
+        private static object SetVerboseLevel(string lvl)
+        {
+            LogLevel = lvl switch
+            {
+                "debug" => MessageType.DEBUG,
+                "exception" => MessageType.EXCEPTION,
+                "error" => MessageType.ERROR,
+                _ => throw new NotImplementedException(message: $"Invalid input parameter: \"--verbose\""),
+            };
+            return null;
+        }
+
         private static object ShowHelp()
         {
-            Console.WriteLine($"Help");
+            string[] ParamsDescription = new string[6]
+            {
+                "--starttime, -s",  // ParamsDescription[0]
+                "--endtime, -e,",   // ParamsDescription[1]
+                "-t",               // ParamsDescription[2]
+                "-h",               // ParamsDescription[3]
+                "--verbose",        // ParamsDescription[4]
+                "-?",               // ParamsDescription[5]
+            };
+
+            Console.WriteLine(String.Format("{0,0}\n{1,89}\n\n  {2,-18}{3}\n  {4,-18}{5}\n  {6,-18}{7}\n  {8,-18}{9}\n  {10,-18}{11}\n  {12,-18}{13}\n",
+                $" Usage: MacroscopRtspUrlGenerator <file|directory> [{ParamsDescription[4]} <DEBUG|EXCEPTION|ERROR>] " +
+                $"[{ParamsDescription[2]}] [{ParamsDescription[3]} <int>]",
+                $"[{ParamsDescription[0]} <DateTime>] [{ParamsDescription[1]} <DateTime>]",
+                $"{ParamsDescription[0]}", "<DateTime>.",
+                $"{ParamsDescription[1]}", "<DateTime>.",
+                $"{ParamsDescription[2]}", "Specify to show timestamps and threads for messages.",
+                $"{ParamsDescription[3]}", "<int>. Specify to hide messages that are less than repeated <int> times.",
+                $"{ParamsDescription[4]}", "<DEBUG|EXCEPTION|ERROR>. Default value is UNKNOWN (everything messages including not recognized).",
+                $"{ParamsDescription[5]}", "Show this message and exit."));
+
             Environment.Exit(0);
             return null;
         }
@@ -252,6 +282,7 @@ namespace LogAnalyzer
                 "NetworkServer" => new NetworkServer(messageStrings.ToArray()),
                 "AppConstruct" => new AppConstruct(messageStrings.ToArray()),
                 // "Error" => new Error(messageStrings.ToArray()),
+                // "ErrorArchive" => new Error(messageStrings.ToArray()),
                 "ConfigStorage_Error" => new ConfigStorage_Error(messageStrings.ToArray()),
                 "DevConInfo" => new DevConInfo(messageStrings.ToArray()),
                 "DevConError" => new DevConError(messageStrings.ToArray()),

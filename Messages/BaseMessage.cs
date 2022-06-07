@@ -30,6 +30,8 @@ namespace LogAnalyzer.Messages
         protected abstract int messageOffset { get; }
         public string Type { get => this.GetType().Name; }
         public int Count { get => TimeStamps.Values.Sum(item => item.Length); }
+        public DateTime First { get => TimeStamps.Keys.Min(); }
+        public DateTime Last { get => TimeStamps.Keys.Max(); }
         protected string[] messageRawBody { get; }
         [JsonConverter(typeof(StringEnumConverter))] public MessageType MessageType { get; }
 #nullable enable
@@ -48,8 +50,9 @@ namespace LogAnalyzer.Messages
             MessageType = GetMessageType(messageStrings[1]);
             if (MessageType < Program.LogLevel) return;
 
+            string str = messageStrings[0];
             var parameterExpression = new Regex(regexFormatDateTime);
-            var parameterMatch = parameterExpression.Match(messageStrings[0]);
+            var parameterMatch = parameterExpression.Match(str);
             if (parameterMatch.Groups[1].Value.Length > 0)
             {
                 TimeStamp = DateTime.ParseExact(parameterMatch.Groups[1].Value, dateTimeFormat, null);
@@ -62,7 +65,6 @@ namespace LogAnalyzer.Messages
 
             if (!isInRange) return;
 
-            string str = messageStrings[0];
             int i = messageStrings[0].IndexOf("ChannelId"); if (i > 0) str = messageStrings[0].Substring(0, i);
             i = str.IndexOf(", Id"); if (i > 0) str = str.Substring(0, i);
             i = str.IndexOf("]"); if (i > 0) str = str.Substring(0, i);
