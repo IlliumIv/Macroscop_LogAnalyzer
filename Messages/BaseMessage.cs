@@ -18,12 +18,16 @@ namespace LogAnalyzer.Messages
     public abstract class BaseMessage
     {
         public long GlobalID;
-        [JsonIgnore] public DateTime TimeStamp { get; }
-        [JsonConverter(typeof(FormattingNoneConverter))] public Dictionary<DateTime, long[]> TimeStamps { get; } = new Dictionary<DateTime, long[]>();
+        [JsonIgnore]
+        public DateTime TimeStamp { get; }
+        [JsonConverter(typeof(FormattingNoneConverter))]
+        public Dictionary<DateTime, long[]> TimeStamps { get; } = new Dictionary<DateTime, long[]>();
 #nullable enable
-        [JsonIgnore] protected string? Thread { get; }
+        [JsonIgnore]
+        protected string? Thread { get; }
 #nullable disable
-        [JsonConverter(typeof(FormattingNoneConverter))] public Dictionary<string, long[]> Threads { get; } = new Dictionary<string, long[]>();
+        [JsonConverter(typeof(FormattingNoneConverter))]
+        public Dictionary<string, long[]>Threads { get; } = new Dictionary<string, long[]>();
         public virtual string Message { get => string.Join(Environment.NewLine, messageRawBody.Skip(messageOffset).Where(s => s.Length > 1)); }
 
         // public string Message { get => messageRawBody[messageOffset]; }
@@ -65,9 +69,9 @@ namespace LogAnalyzer.Messages
 
             if (!isInRange) return;
 
-            int i = messageStrings[0].IndexOf("ChannelId"); if (i > 0) str = messageStrings[0].Substring(0, i);
-            i = str.IndexOf(", Id"); if (i > 0) str = str.Substring(0, i);
-            i = str.IndexOf("]"); if (i > 0) str = str.Substring(0, i);
+            int i = messageStrings[0].IndexOf("ChannelId"); if (i > 0) str = messageStrings[0][..i];
+            i = str.IndexOf(", Id"); if (i > 0) str = str[..i];
+            i = str.IndexOf("]"); if (i > 0) str = str[..i];
             parameterExpression = new Regex(regexFormatThread);
             parameterMatch = parameterExpression.Match(str);
             if (parameterMatch.Groups[1].Value.Length > 0)
@@ -77,7 +81,7 @@ namespace LogAnalyzer.Messages
             }
         }
 
-        protected MessageType GetMessageType(string value)
+        protected static MessageType GetMessageType(string value)
         {
             return value switch
             {
@@ -88,26 +92,26 @@ namespace LogAnalyzer.Messages
             };
         }
 
-        protected StreamFormatType? GetStreamFormat(string value)
+        protected static StreamFormatType GetStreamFormat(string value)
         {
             return value switch
             {
-                "MJPEG" => StreamFormatType.MJPEG,
-                "H264" => StreamFormatType.H264,
-                "H265" => StreamFormatType.H265,
-                "MPEG4_Part2" => StreamFormatType.MPEG4_Part2,
-                "MxPEG" => StreamFormatType.MxPEG,
-                _ => null,
+                string a when a.Contains("MJPEG") => StreamFormatType.MJPEG,
+                string a when a.Contains("H264") => StreamFormatType.H264,
+                string a when a.Contains("H265") => StreamFormatType.H265,
+                string a when a.Contains("MPEG4_Part2") => StreamFormatType.MPEG4_Part2,
+                string a when a.Contains("MxPEG") => StreamFormatType.MxPEG,
+                _ => StreamFormatType.UNKNOWN
             };
         }
 
-        protected SteamType? GetSteamType(string value)
+        protected static SteamType GetSteamType(string value)
         {
             return value switch
             {
                 "MAIN" => SteamType.MAIN,
                 "ALTERNATIVE" => SteamType.ALTERNATIVE,
-                _ => null,
+                _ => SteamType.UNKNOWN,
             };
         }
 
@@ -116,14 +120,10 @@ namespace LogAnalyzer.Messages
             return base.GetHashCode();
         }
 
-        public virtual bool Equals(object message)
+        public virtual bool IsSameMessage(object obj)
         {
-            return IsSameMessage(message);
-        }
-
-        protected virtual bool IsSameMessage(object message)
-        {
-            return this.Message == (message as BaseMessage).Message;
+            var message = obj as BaseMessage;
+            return Message == message.Message;
         }
 
         public BaseMessage Concat(BaseMessage objB)
@@ -146,7 +146,7 @@ namespace LogAnalyzer.Messages
 
         public class ConsoleOutContractResolver : DefaultContractResolver
         {
-            public static readonly ConsoleOutContractResolver Instance = new ConsoleOutContractResolver();
+            public static readonly ConsoleOutContractResolver Instance = new();
 
             protected override JsonProperty CreateProperty(MemberInfo member, MemberSerialization memberSerialization)
             {

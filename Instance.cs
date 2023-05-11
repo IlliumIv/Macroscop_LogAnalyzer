@@ -13,11 +13,11 @@ namespace LogAnalyzer
 {
     public static class Instance
     {
-        public static List<ArchCounter> ArchCounters = new List<ArchCounter>();
-        public static List<PerformanceCounter> Performances = new List<PerformanceCounter>();
-        public static List<DevCon> DeviceConnectionMessages = new List<DevCon>();
-        public static List<BaseMessage> ErrorMessages = new List<BaseMessage>();
-        public static List<BaseMessage> DebugMessages = new List<BaseMessage>();
+        public static List<ArchCounter> ArchCounters = new();
+        public static List<PerformanceCounter> Performances = new();
+        public static List<DevCon> DeviceConnectionMessages = new();
+        public static List<BaseMessage> ErrorMessages = new();
+        public static List<BaseMessage> DebugMessages = new();
 
         public static void Insert<T>(T obj)
         {
@@ -31,7 +31,7 @@ namespace LogAnalyzer
             switch (obj.GetType().BaseType.Name)
             {
                 case "DevCon":
-                    index = DeviceConnectionMessages.FindIndex(t => (obj as DevCon).Equals(t));
+                    index = DeviceConnectionMessages.FindIndex(t => (obj as DevCon).IsSameMessage(t));
                     if (index == -1) {
                         DeviceConnectionMessages.Add(obj as DevCon);
                         return; }
@@ -43,7 +43,7 @@ namespace LogAnalyzer
                     switch (newMessage.MessageType)
                     {
                         case MessageType.DEBUG:
-                            index = DebugMessages.FindIndex(t => newMessage.Equals(t));
+                            index = DebugMessages.FindIndex(t => newMessage.IsSameMessage(t));
                             if (index == -1)
                             {
                                 DebugMessages.Add(obj as BaseMessage);
@@ -54,7 +54,7 @@ namespace LogAnalyzer
                             break;
 
                         default:
-                            index = ErrorMessages.FindIndex(t => newMessage.Equals(t));
+                            index = ErrorMessages.FindIndex(t => newMessage.IsSameMessage(t));
                             if (index == -1) {
                                 ErrorMessages.Add(obj as BaseMessage);
                                 return; }

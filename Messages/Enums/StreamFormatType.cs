@@ -2,6 +2,7 @@
 {
     public enum StreamFormatType
     {
+        UNKNOWN,
         MJPEG,
         H264,
         H265,

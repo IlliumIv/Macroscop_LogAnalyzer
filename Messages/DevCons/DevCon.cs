@@ -12,13 +12,13 @@ namespace LogAnalyzer.Messages.DevCons
         protected override int messageOffset => offset;
         private int offset = 2;
 
-        // private readonly string regexFormatChannelId = @"ChannelId[ =]*([\d\w]{8}-.{4}-.{4}-.{4}-.{12})[ ,]*";
-        private readonly string regexFormatSsType = @"SStype[ =]*(.*?)[ ,]*";
+        private readonly string regexFormatChannelId = @"ChannelId[ =]*([^\[,\]]*)";
+        private readonly string regexFormatSsType = @"SStype[ =]*([^\[,\]]*)";
         private readonly string regexFormatSsFunctions = @"SSFunctions[ =]*(.*), DevType";
-        private readonly string regexFormatDevType = @"DevType[ =]*([\d\w ]*)[ ,]*";
-        private readonly string regexFormatIp = @"Ip = ([\d\w.:]*)[ ,]*";
-        private readonly string regexFormatSteamType = @"SteamType[ =]*(\w*)[ ,]*";
-        private readonly string regexFormatStreamFormat = @"StreamFormat[ =]*([\d\w]*)";
+        private readonly string regexFormatDevType = @"DevType[ =]*([^\[,\]]*)";
+        private readonly string regexFormatIp = @"Ip[ =]*([^\[,\]]*)";
+        private readonly string regexFormatSteamType = @"SteamType[ =]*([^\[,\]]*)";
+        private readonly string regexFormatStreamFormat = @"StreamFormat[ =]*([^\[,\]]*)";
 
 #nullable enable
         public string? ChannelId { get; protected set; }
@@ -34,6 +34,10 @@ namespace LogAnalyzer.Messages.DevCons
         {
             Regex parameterExpression;
             Match parameterMatch;
+
+            parameterExpression = new Regex(regexFormatChannelId);
+            parameterMatch = parameterExpression.Match(messageStrings[0]);
+            if (parameterMatch.Groups[1].Value.Length > 0) ChannelId = parameterMatch.Groups[1].Value;
 
             parameterExpression = new Regex(regexFormatSsType);
             parameterMatch = parameterExpression.Match(messageStrings[0]);
@@ -69,7 +73,7 @@ namespace LogAnalyzer.Messages.DevCons
             Instance.Insert(this);
         }
 
-        public override bool Equals(object message)
+        public override bool IsSameMessage(object message)
         {
             try {
                 var m = (DevCon)message;
@@ -86,7 +90,7 @@ namespace LogAnalyzer.Messages.DevCons
                     this.Address == m.Address &&
                     this.SteamType == m.SteamType &&
                     this.StreamFormat == m.StreamFormat &&
-                    base.Equals(message);
+                    base.IsSameMessage(message);
             } catch (InvalidCastException) { return false; };
         }
 

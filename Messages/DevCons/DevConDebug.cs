@@ -6,7 +6,7 @@ namespace LogAnalyzer.Messages.DevCons
     {
         public DevConDebug(string[] messageStrings) : base(messageStrings) { }
 
-        protected override bool IsSameMessage(object message)
+        public override bool IsSameMessage(object message)
         {
             try
             {

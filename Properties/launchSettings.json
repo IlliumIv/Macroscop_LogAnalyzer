@@ -2,7 +2,7 @@
   "profiles": {
     "LogAnalyzer": {
       "commandName": "Project",
-      "commandLineArgs": "\"2021-09-06#15_53_50\""
+      "commandLineArgs": "--verbose ERROR \"D:\\users\\polyakov\\Downloads\\Новая папка\\Logs_MacroscopServer\\2023-05-10#10_35_07\""
     }
   }
 }

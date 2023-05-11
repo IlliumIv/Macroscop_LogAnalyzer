@@ -16,7 +16,7 @@ namespace LogAnalyzer
 {
     class Program
     {
-        static readonly Regex NewMessageCatch = new Regex(@"^\[.*\]");
+        static readonly Regex NewMessageCatch = new(@"^\[.*\]");
 
         public static bool HideTimeStamps = true;
         public static int HideMessagesIfCountLessThan = 0;
@@ -34,7 +34,7 @@ namespace LogAnalyzer
         {
             var directoryPaths = ParseArgs(args);
 
-            Stopwatch timer = new Stopwatch();
+            Stopwatch timer = new();
             timer.Start();
 
             foreach (string path in directoryPaths)
@@ -80,10 +80,12 @@ namespace LogAnalyzer
                 "ArchCounters.MinTime: {0}\n" +
                 "ArchCounters.MaxTime: {1}\n" +
                 "ArchCounters.Shrs: {2}\n" +
+                "ArchCounters.AvgArcQSize: {3}\n" +
                 "\n",
                 Instance.ArchCounters.Aggregate((curMin, x) => (curMin == null || x.TimeStamp < curMin.TimeStamp ? x : curMin)).TimeStamp,
                 Instance.ArchCounters.Aggregate((curMax, x) => (curMax == null || x.TimeStamp > curMax.TimeStamp ? x : curMax)).TimeStamp,
-                Instance.ArchCounters.Where(item => item.Shr > 0).Count()
+                Instance.ArchCounters.Where(item => item.Shr > 0).Count(),
+                Instance.ArchCounters.Average(item => item.ArchQSizeMb)
                 );
 
             if (Instance.Performances.Count > 0) Console.Write($"Performances.Count: {Instance.Performances.Count}\n" +
@@ -136,7 +138,7 @@ namespace LogAnalyzer
 
             for (int i = 0; i < args.Length; i++)
             {
-                if ((args[i].Length == 2 && !args[i].Contains(":")) || args[i].StartsWith("--"))
+                if ((args[i].Length == 2 && !args[i].Contains(':')) || args[i].StartsWith("--"))
                 {
                     var argument = args[i][1..];
                     _ = argument.ToLower() switch
@@ -205,16 +207,16 @@ namespace LogAnalyzer
         static void Parse(string path)
         {
             var fileInfo = new FileInfo(path);
-            var fileName = fileInfo.Name.Substring(0, fileInfo.Name.IndexOf('.'));
+            var fileName = fileInfo.Name[..fileInfo.Name.IndexOf('.')];
             string message = "Done.";
 
             Console.Write($"Processing {fileInfo.Name}... ");
 
             using (var progress = new ProgressBar())
             {
-                HashSet<string> rawLogStrings = new HashSet<string>();
+                HashSet<string> rawLogStrings = new();
 
-                using StreamReader reader = new StreamReader(path);
+                using StreamReader reader = new(path);
                 var position = reader.BaseStream.Position;
 
                 switch (fileName)
@@ -281,8 +283,8 @@ namespace LogAnalyzer
             {
                 "NetworkServer" => new NetworkServer(messageStrings.ToArray()),
                 "AppConstruct" => new AppConstruct(messageStrings.ToArray()),
-                // "Error" => new Error(messageStrings.ToArray()),
-                // "ErrorArchive" => new Error(messageStrings.ToArray()),
+                "Error" => new Error(messageStrings.ToArray()),
+                "ErrorArchive" => new Error(messageStrings.ToArray()),
                 "ConfigStorage_Error" => new ConfigStorage_Error(messageStrings.ToArray()),
                 "DevConInfo" => new DevConInfo(messageStrings.ToArray()),
                 "DevConError" => new DevConError(messageStrings.ToArray()),
